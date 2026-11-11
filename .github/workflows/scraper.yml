@@ -1,0 +1,28 @@
+name: Market Scraper Diario
+
+on:
+  schedule:
+    # Se ejecuta de lunes a viernes a las 17:35 hs (Hora Argentina, 20:35 UTC)
+    - cron: '35 20 * * 1-5'
+  workflow_dispatch: # Habilita el botón manual para probarlo cuando quieras
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v3
+
+      - name: Configurar Python
+        uses: setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Instalar dependencias
+        run: |
+          pip install requests firebase-admin
+
+      - name: Ejecutar scraper
+        env:
+          FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
+        run: python scraper.py
