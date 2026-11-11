@@ -37,13 +37,24 @@ bonos_data = [
 ]
 
 ons_data = [
-    {"ticker": "YMCIO", "name": "YPF Clase 16 2026", "currency": "MEP", "px": 102.10, "tir": 7.20, "duration": 0.95, "paridad": "101.5%", "vto": "30/09/2026", "var1d": 0.05, "vol": 5400000},
-    {"ticker": "IRC1O", "name": "IRSA Clase 14 2028", "currency": "MEP", "px": 101.40, "tir": 7.85, "duration": 2.10, "paridad": "100.8%", "vto": "22/06/2028", "var1d": -0.12, "vol": 3100000},
-    {"ticker": "TLC1O", "name": "Telecom Arg 2027", "currency": "MEP", "px": 99.80, "tir": 8.40, "duration": 1.80, "paridad": "99.2%", "vto": "18/07/2027", "var1d": 0.20, "vol": 4800000},
-    {"ticker": "MGC1O", "name": "Pampa Energía 2029", "currency": "MEP", "px": 98.70, "tir": 8.10, "duration": 2.90, "paridad": "98.5%", "vto": "15/04/2029", "var1d": 0.10, "vol": 6200000},
-    {"ticker": "CAC2O", "name": "Cresud Clase 43 2027", "currency": "MEP", "px": 100.50, "tir": 7.95, "duration": 1.40, "paridad": "100.1%", "vto": "12/03/2027", "var1d": 0.00, "vol": 2100000},
-    {"ticker": "PAC1O", "name": "Pan American Energy 2027", "currency": "MEP", "px": 103.20, "tir": 6.80, "duration": 1.20, "paridad": "102.0%", "vto": "27/11/2027", "var1d": -0.05, "vol": 8100000}
-]
+       {"ticker": "YMCIO", "name": "YPF Clase 16 2026", "currency": "MEP", "px": 102.10, "tir": 6.85, "duration": 0.85, "paridad": "101.5%", "vto": "30/09/2026", "var1d": 0.05, "vol": 7400000},
+       {"ticker": "YMCX",  "name": "YPF Clase 39 2027", "currency": "MEP", "px": 101.80, "tir": 7.40, "duration": 1.45, "paridad": "100.9%", "vto": "15/12/2027", "var1d": 0.10, "vol": 6200000},
+       {"ticker": "YMCHO", "name": "YPF Clase 28 2029", "currency": "MEP", "px": 98.40,  tir: 8.20, "duration": 2.80, "paridad": "98.8%",  vto: "30/06/2029", var1d: -0.15, "vol": 8900000},
+       {"ticker": "YMCQO", "name": "YPF Clase 35 2031", "currency": "MEP", "px": 96.20,  tir: 8.75, "duration": 3.90, "paridad": "97.1%",  vto: "01/06/2031", var1d: 0.25, "vol": 5100000},
+       {"ticker": "MGC1O", "name": "Pampa Energía Clase 9 2026", "currency": "MEP", "px": 101.90, "tir": 6.95, "duration": 1.10, "paridad": "101.0%", "vto": "08/12/2026", var1d: 0.00, "vol": 4800000},
+       {"ticker": "MGC9O", "name": "Pampa Energía Clase 18 2029", "currency": "MEP", "px": 99.10, "tir": 7.70, "duration": 2.65, "paridad": "99.4%", "vto": "15/04/2029", var1d: 0.08, "vol": 6400000},
+       {"ticker": "PAC1O", "name": "Pan American Energy 2027", "currency": "MEP", "px": 103.50, "tir": 6.40, "duration": 1.25, "paridad": "102.3%", "vto": "27/11/2027", var1d: -0.05, "vol": 9200000},
+       {"ticker": "PNDCO", "name": "Pan American Energy 2032", "currency": "MEP", "px": 99.80, "tir": 7.55, "duration": 4.10, "paridad": "99.2%", "vto": "30/04/2032", var1d: 0.12, "vol": 4100000},
+       {"ticker": "TLC1O", "name": "Telecom Argentina 2027", "currency": "MEP", "px": 99.80, "tir": 8.40, "duration": 1.75, "paridad": "99.2%", "vto": "18/07/2027", var1d: 0.20, "vol": 5300000},
+       {"ticker": "TLCMO", "name": "Telecom Argentina 2031", "currency": "MEP", "px": 95.70, "tir": 8.95, "duration": 3.80, "paridad": "96.5%", "vto": "15/09/2031", var1d: -0.30, "vol": 3600000},
+       {"ticker": "VSC3O", "name": "Vista Energy Clase 3 2027", "currency": "MEP", "px": 102.40, "tir": 6.70, "duration": 1.30, "paridad": "101.8%", "vto": "24/02/2027", var1d: 0.10, "vol": 7100000},
+       {"ticker": "VSC4O", "name": "Vista Energy Clase 4 2029", "currency": "MEP", "px": 98.90, "tir": 7.60, "duration": 2.70, "paridad": "99.0%", "vto": "10/08/2029", var1d: 0.18, "vol": 5900000},
+       {"ticker": "RCCBO", "name": "Arcor Clase 18 2027", "currency": "MEP", "px": 104.10, "tir": 6.10, "duration": 1.15, "paridad": "103.2%", "vto": "09/10/2027", var1d: -0.02, "vol": 4200000},
+       {"ticker": "IRC1O", "name": "IRSA Clase 14 2028", "currency": "MEP", "px": 101.40, "tir": 7.85, "duration": 2.10, "paridad": "100.8%", "vto": "22/06/2028", var1d: -0.12, "vol": 3100000},
+       {"ticker": "CAC2O", "name": "Cresud Clase 43 2027", "currency": "MEP", "px": 100.50, "tir": 7.95, "duration": 1.40, "paridad": "100.1%", "vto": "12/03/2027", var1d: 0.00, "vol": 2400000},
+       {"ticker": "CP33O", "name": "CGC Clase 33 2028", "currency": "MEP", "px": 97.20, "tir": 8.60, "duration": 2.35, "paridad": "97.9%", "vto": "10/11/2028", var1d: 0.40, "vol": 2900000},
+       {"ticker": "TTC2O", "name": "Tecpetrol Clase 2 2027", "currency": "MEP", "px": 102.80, "tir": 6.65, "duration": 1.35, "paridad": "102.1%", "vto": "18/05/2027", var1d: -0.08, "vol": 3800000}
+   ]
 
 payload = {
     "fecha": today_str,
