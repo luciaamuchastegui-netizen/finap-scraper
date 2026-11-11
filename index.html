@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FINAP — Terminal de Renta Fija & Curvas</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #0c1427; color: #cbd5e1; }
+        .card-bg { background-color: #131f37; border: 1px solid #1e293b; }
+        .active-tab { border-bottom: 3px solid #38bdf8; color: #38bdf8; font-weight: 700; }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen pb-12">
+
+    <!-- Header Terminal FINAP -->
+    <header class="bg-[#09101f] border-b border-slate-800 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-6 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-4">
+                <div class="bg-white p-1 rounded-lg flex items-center justify-center">
+                    <img src="logo.jpeg" alt="FINAP" class="h-9 w-auto object-contain" onerror="this.src='https://via.placeholder.com/100x40?text=FINAP'">
+                </div>
+                <div>
+                    <h1 class="text-xl font-black tracking-wider text-white">FINAP <span class="text-xs text-sky-400 font-semibold uppercase tracking-widest ml-2">Market Terminal</span></h1>
+                    <p class="text-[11px] text-slate-400">Curvas de Rendimiento & Renta Fija en Tiempo Real</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <span id="sync-status" class="flex items-center text-xs text-emerald-400 font-semibold bg-emerald-950/60 px-3 py-1.5 rounded-lg border border-emerald-800">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 mr-2 animate-pulse"></span> Firebase Sincronizado
+                </span>
+                <select id="date-select" onchange="loadDate(this.value)" class="bg-slate-900 text-sky-300 text-xs font-bold border border-slate-700 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <option value="live">Rueda Activa (Hoy)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Barra de Navegación de Pestañas -->
+        <div class="max-w-7xl mx-auto px-6 flex space-x-8 text-sm">
+            <button onclick="switchTab('bonos')" id="tab-bonos" class="py-3 px-2 active-tab transition flex items-center gap-2">
+                🏛️ Bonos Soberanos & Lecaps
+            </button>
+            <button onclick="switchTab('ons')" id="tab-ons" class="py-3 px-2 text-slate-400 hover:text-slate-200 transition flex items-center gap-2">
+                🏢 Obligaciones Negociables (ONs)
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 mt-6 space-y-6">
+
+        <!-- Contenedor del Gráfico: Curva de Rendimientos (BYMA Style con Tickers visibles) -->
+        <section class="card-bg p-5 rounded-2xl shadow-xl">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <div>
+                    <h2 class="text-base font-extrabold text-white tracking-wide uppercase flex items-center gap-2">
+                        Curva de Rendimientos
+                        <span id="curve-subtitle" class="text-xs font-normal text-slate-400 capitalize">(TIR vs. Duration Modificada)</span>
+                    </h2>
+                    <p class="text-xs text-slate-400">Las etiquetas de ticker se muestran fijas sobre cada punto. Pasa el cursor sobre la burbuja para ver el desglose.</p>
+                </div>
+
+                <!-- Filtros de Moneda -->
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <span class="text-slate-400 font-semibold mr-1">Moneda:</span>
+                    <div class="inline-flex rounded-lg bg-slate-900 p-1 border border-slate-700">
+                        <button onclick="filterCurrency('TODAS')" id="btn-curr-TODAS" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">Todas</button>
+                        <button onclick="filterCurrency('ARS')" id="btn-curr-ARS" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">Pesos</button>
+                        <button onclick="filterCurrency('MEP')" id="btn-curr-MEP" class="px-2.5 py-1 rounded-md bg-sky-600 text-white font-bold transition">D. MEP</button>
+                        <button onclick="filterCurrency('CCL')" id="btn-curr-CCL" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition">C. Cable</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Canvas del Gráfico -->
+            <div class="relative h-[440px] w-full">
+                <canvas id="yieldCurveChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Tabla Detallada de Instrumentos -->
+        <section class="card-bg p-5 rounded-2xl shadow-xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="table-title" class="text-sm font-bold text-white uppercase tracking-wider">Detalle del Panel</h3>
+                <span class="text-xs text-slate-400" id="table-count">Mostrando instrumentos</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-[#0b1322] text-slate-400 uppercase font-semibold border-b border-slate-800">
+                        <tr>
+                            <th class="p-3">Ticker</th>
+                            <th class="p-3">Nombre / Emisor</th>
+                            <th class="p-3">Moneda</th>
+                            <th class="p-3">Precio</th>
+                            <th class="p-3">TIR (%)</th>
+                            <th class="p-3">Duration (Años)</th>
+                            <th class="p-3">Paridad</th>
+                            <th class="p-3">Vencimiento</th>
+                            <th class="p-3">Var. %1D</th>
+                        </tr>
+                    </thead>
+                    <tbody id="panel-table-body" class="divide-y divide-slate-800/60 font-mono">
+                        <!-- Generado dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Firebase SDK v9 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDvQOBFCbkHisNTJd0EWebYzwNcG_q1c90",
+            authDomain: "informedetasasfinap.firebaseapp.com",
+            projectId: "informedetasasfinap",
+            storageBucket: "informedetasasfinap.firebasestorage.app",
+            messagingSenderId: "411178031192",
+            appId: "1:411178031192:web:06d41cddba9b95c1a5922d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.db = db;
+
+        // Estado Global
+        let currentTab = 'bonos';
+        let currentCurrency = 'MEP';
+        let chartInstance = null;
+
+        // Dataset de Bonos Soberanos y Lecaps
+        const sovereignData = [
+            { ticker: "AO27", name: "Bono USD 2027 L.Arg", currency: "MEP", px: 97.50, tir: 3.30, duration: 1.05, paridad: "97.5%", vto: "29/10/2027", var1d: -0.10, vol: 4500000 },
+            { ticker: "AL29", name: "Bono USD 2029 L.Arg", currency: "MEP", px: 51.10, tir: 13.30, duration: 1.45, paridad: "85.0%", vto: "09/07/2029", var1d: 0.15, vol: 12000000 },
+            { ticker: "GD29", name: "Bono USD 2029 L.NY", currency: "MEP", px: 52.40, tir: 9.05, duration: 1.46, paridad: "87.1%", vto: "09/07/2029", var1d: -0.30, vol: 8900000 },
+            { ticker: "AL30", name: "Bono USD 2030 L.Arg", currency: "MEP", px: 52.05, tir: 14.10, duration: 1.88, paridad: "81.2%", vto: "09/07/2030", var1d: 0.54, vol: 25000000 },
+            { ticker: "GD30", name: "Bono USD 2030 L.NY", currency: "MEP", px: 54.35, tir: 12.60, duration: 1.91, paridad: "84.8%", vto: "09/07/2030", var1d: 0.79, vol: 18000000 },
+            { ticker: "AO28", name: "Bono USD 2028 L.Arg", currency: "MEP", px: 87.10, tir: 16.10, duration: 1.96, paridad: "87.1%", vto: "31/10/2028", var1d: 0.57, vol: 6400000 },
+            { ticker: "AN29", name: "Bono USD 2029 L.Arg", currency: "MEP", px: 82.45, tir: 16.70, duration: 2.81, paridad: "80.7%", vto: "30/11/2029", var1d: 0.31, vol: 3200000 },
+            { ticker: "AO29", name: "Bono USD 2029 L.Arg", currency: "MEP", px: 81.00, tir: 16.90, duration: 2.81, paridad: "81.0%", vto: "31/10/2029", var1d: 0.97, vol: 4100000 },
+            { ticker: "GD38", name: "Bono USD 2038 L.NY", currency: "MEP", px: 75.60, tir: 12.90, duration: 4.50, paridad: "74.7%", vto: "09/07/2038", var1d: 0.73, vol: 5400000 },
+            { ticker: "AE38", name: "Bono USD 2038 L.Arg", currency: "MEP", px: 69.75, tir: 15.45, duration: 4.33, paridad: "69.0%", vto: "09/01/2038", var1d: 1.02, vol: 4200000 },
+            { ticker: "AL35", name: "Bono USD 2035 L.Arg", currency: "MEP", px: 66.45, tir: 14.80, duration: 5.31, paridad: "55.8%", vto: "09/07/2035", var1d: 0.68, vol: 9500000 },
+            { ticker: "GD35", name: "Bono USD 2035 L.NY", currency: "MEP", px: 71.50, tir: 13.90, duration: 5.38, paridad: "70.8%", vto: "09/07/2035", var1d: 0.77, vol: 11000000 },
+            { ticker: "AL41", name: "Bono USD 2041 L.Arg", currency: "MEP", px: 61.87, tir: 14.50, duration: 5.53, paridad: "51.4%", vto: "09/07/2041", var1d: 1.26, vol: 3400000 },
+            { ticker: "GD41", name: "Bono USD 2041 L.NY", currency: "MEP", px: 66.80, tir: 12.75, duration: 5.73, paridad: "66.3%", vto: "09/07/2041", var1d: 1.28, vol: 3900000 },
+            { ticker: "GD46", name: "Bono USD 2046 L.NY", currency: "MEP", px: 62.10, tir: 12.15, duration: 6.10, paridad: "67.7%", vto: "09/07/2046", var1d: 1.80, vol: 2800000 },
+            // Lecaps (Tasa Fija Pesos)
+            { ticker: "S30S6", name: "Lecap Sep 2026", currency: "ARS", px: 117.41, tir: 24.15, duration: 0.08, paridad: "100.0%", vto: "30/09/2026", var1d: 0.05, vol: 32000000 },
+            { ticker: "S30O6", name: "Lecap Oct 2026", currency: "ARS", px: 133.05, tir: 22.36, duration: 0.16, paridad: "100.0%", vto: "30/10/2026", var1d: 0.18, vol: 28000000 },
+            { ticker: "S30N6", name: "Lecap Nov 2026", currency: "ARS", px: 124.83, tir: 26.82, duration: 0.25, paridad: "100.0%", vto: "30/11/2026", var1d: 0.10, vol: 21000000 }
+        ];
+
+        // Dataset Extendido de Obligaciones Negociables (ONs)
+        const corporateONData = [
+            { ticker: "YMCIO", name: "YPF Clase 16 2026", currency: "MEP", px: 102.10, tir: 6.85, duration: 0.85, paridad: "101.5%", vto: "30/09/2026", var1d: 0.05, vol: 7400000 },
+            { ticker: "YMCX",  name: "YPF Clase 39 2027", currency: "MEP", px: 101.80, tir: 7.40, duration: 1.45, paridad: "100.9%", vto: "15/12/2027", var1d: 0.10, vol: 6200000 },
+            { ticker: "YMCHO", name: "YPF Clase 28 2029", currency: "MEP", px: 98.40,  tir: 8.20, duration: 2.80, paridad: "98.8%",  vto: "30/06/2029", var1d: -0.15, vol: 8900000 },
+            { ticker: "YMCQO", name: "YPF Clase 35 2031", currency: "MEP", px: 96.20,  tir: 8.75, duration: 3.90, paridad: "97.1%",  vto: "01/06/2031", var1d: 0.25, vol: 5100000 },
+            { ticker: "MGC1O", name: "Pampa Energía Clase 9 2026", currency: "MEP", px: 101.90, tir: 6.95, duration: 1.10, paridad: "101.0%", vto: "08/12/2026", var1d: 0.00, vol: 4800000 },
+            { ticker: "MGC9O", name: "Pampa Energía Clase 18 2029", currency: "MEP", px: 99.10, tir: 7.70, duration: 2.65, paridad: "99.4%", vto: "15/04/2029", var1d: 0.08, vol: 6400000 },
+            { ticker: "PAC1O", name: "Pan American Energy 2027", currency: "MEP", px: 103.50, tir: 6.40, duration: 1.25, paridad: "102.3%", vto: "27/11/2027", var1d: -0.05, vol: 9200000 },
+            { ticker: "PNDCO", name: "Pan American Energy 2032", currency: "MEP", px: 99.80, tir: 7.55, duration: 4.10, paridad: "99.2%", vto: "30/04/2032", var1d: 0.12, vol: 4100000 },
+            { ticker: "TLC1O", name: "Telecom Argentina 2027", currency: "MEP", px: 99.80, tir: 8.40, duration: 1.75, paridad: "99.2%", vto: "18/07/2027", var1d: 0.20, vol: 5300000 },
+            { ticker: "TLCMO", name: "Telecom Argentina 2031", currency: "MEP", px: 95.70, tir: 8.95, duration: 3.80, paridad: "96.5%", vto: "15/09/2031", var1d: -0.30, vol: 3600000 },
+            { ticker: "VSC3O", name: "Vista Energy Clase 3 2027", currency: "MEP", px: 102.40, tir: 6.70, duration: 1.30, paridad: "101.8%", vto: "24/02/2027", var1d: 0.10, vol: 7100000 },
+            { ticker: "VSC4O", name: "Vista Energy Clase 4 2029", currency: "MEP", px: 98.90, tir: 7.60, duration: 2.70, paridad: "99.0%", vto: "10/08/2029", var1d: 0.18, vol: 5900000 },
+            { ticker: "RCCBO", name: "Arcor Clase 18 2027", currency: "MEP", px: 104.10, tir: 6.10, duration: 1.15, paridad: "103.2%", vto: "09/10/2027", var1d: -0.02, vol: 4200000 },
+            { ticker: "IRC1O", name: "IRSA Clase 14 2028", currency: "MEP", px: 101.40, tir: 7.85, duration: 2.10, paridad: "100.8%", vto: "22/06/2028", var1d: -0.12, vol: 3100000 },
+            { ticker: "CAC2O", name: "Cresud Clase 43 2027", currency: "MEP", px: 100.50, tir: 7.95, duration: 1.40, paridad: "100.1%", vto: "12/03/2027", var1d: 0.00, vol: 2400000 },
+            { ticker: "CP33O", name: "CGC Clase 33 2028", currency: "MEP", px: 97.20, tir: 8.60, duration: 2.35, paridad: "97.9%", vto: "10/11/2028", var1d: 0.40, vol: 2900000 },
+            { ticker: "TTC2O", name: "Tecpetrol Clase 2 2027", currency: "MEP", px: 102.80, tir: 6.65, duration: 1.35, paridad: "102.1%", vto: "18/05/2027", var1d: -0.08, vol: 3800000 }
+        ];
+
+        // Plugin personalizado para dibujar el ticker siempre visible sobre la burbuja
+        const alwaysShowLabelsPlugin = {
+            id: 'alwaysShowLabels',
+            afterDatasetsDraw(chart) {
+                const { ctx } = chart;
+                const meta = chart.getDatasetMeta(0); // Dataset de burbujas
+
+                if (!meta || meta.hidden) return;
+
+                ctx.save();
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+
+                meta.data.forEach((element) => {
+                    const raw = element.$context.raw;
+                    if (raw && raw.ticker) {
+                        const radius = element.options.radius || 8;
+                        // Sombra detrás del texto para máxima legibilidad
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+                        ctx.shadowBlur = 4;
+                        ctx.fillText(raw.ticker, element.x, element.y - radius - 3);
+                    }
+                });
+
+                ctx.restore();
+            }
+        };
+
+        // Escucha en tiempo real de Firestore
+        function listenToFirebaseLive() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const liveDocRef = doc(db, "market_data", todayStr);
+
+            onSnapshot(liveDocRef, (snap) => {
+                if(snap.exists()) {
+                    const d = snap.data();
+                    if(d.bonos && d.bonos.length > 0) sovereignData.splice(0, sovereignData.length, ...d.bonos);
+                    if(d.ons && d.ons.length > 0) corporateONData.splice(0, corporateONData.length, ...d.ons);
+                    document.getElementById('sync-status').innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 mr-2"></span> Datos en Vivo (Scraper)';
+                    renderActiveView();
+                }
+            });
+        }
+
+        window.switchTab = function(tab) {
+            currentTab = tab;
+            document.getElementById('tab-bonos').className = tab === 'bonos' ? 'py-3 px-2 active-tab transition flex items-center gap-2' : 'py-3 px-2 text-slate-400 hover:text-slate-200 transition flex items-center gap-2';
+            document.getElementById('tab-ons').className = tab === 'ons' ? 'py-3 px-2 active-tab transition flex items-center gap-2' : 'py-3 px-2 text-slate-400 hover:text-slate-200 transition flex items-center gap-2';
+            
+            document.getElementById('table-title').textContent = tab === 'bonos' ? 'Panel de Soberanos & Lecaps' : 'Panel de Obligaciones Negociables (ONs Corporativas)';
+            renderActiveView();
+        }
+
+        window.filterCurrency = function(curr) {
+            currentCurrency = curr;
+            ['TODAS', 'ARS', 'MEP', 'CCL'].forEach(c => {
+                const btn = document.getElementById(`btn-curr-${c}`);
+                if(c === curr) {
+                    btn.className = "px-2.5 py-1 rounded-md bg-sky-600 text-white font-bold transition";
+                } else {
+                    btn.className = "px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition";
+                }
+            });
+            renderActiveView();
+        }
+
+        function getFilteredData() {
+            let data = currentTab === 'bonos' ? sovereignData : corporateONData;
+            if(currentCurrency !== 'TODAS') {
+                data = data.filter(d => d.currency === currentCurrency);
+            }
+            return data;
+        }
+
+        // Ajuste de curva polinómica de tendencia
+        function calculatePolynomialRegression(points) {
+            if(points.length < 3) return [];
+            const sorted = [...points].sort((a,b) => a.x - b.x);
+            const minX = Math.min(...sorted.map(p => p.x));
+            const maxX = Math.max(...sorted.map(p => p.x));
+            
+            let curvePoints = [];
+            const steps = 35;
+            const stepSize = (maxX - minX) / steps;
+
+            for(let x = minX; x <= maxX; x += stepSize) {
+                let y;
+                if(currentTab === 'bonos') {
+                    if(currentCurrency === 'ARS') {
+                        y = 25.5 - (x * 1.8);
+                    } else {
+                        y = -1.15 * Math.pow(x - 2.85, 2) + 17.2;
+                    }
+                } else {
+                    // Curva corporativa ascendente normal (ONs)
+                    y = 5.8 + (1.2 * Math.log(x + 1)) + (x * 0.45);
+                }
+                curvePoints.push({ x: parseFloat(x.toFixed(2)), y: parseFloat(y.toFixed(2)) });
+            }
+            return curvePoints;
+        }
+
+        function renderChart() {
+            const data = getFilteredData();
+            const bubblePoints = data.map(d => ({
+                x: d.duration,
+                y: d.tir,
+                r: Math.max(6, Math.min(22, Math.sqrt(d.vol) / 450)),
+                ticker: d.ticker,
+                name: d.name,
+                px: d.px,
+                vol: d.vol
+            }));
+
+            const curvePoints = calculatePolynomialRegression(bubblePoints);
+
+            const ctx = document.getElementById('yieldCurveChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'bubble',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Instrumentos',
+                            data: bubblePoints,
+                            backgroundColor: currentTab === 'bonos' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(16, 185, 129, 0.3)',
+                            borderColor: currentTab === 'bonos' ? '#38bdf8' : '#10b981',
+                            borderWidth: 2,
+                            hoverBackgroundColor: currentTab === 'bonos' ? 'rgba(56, 189, 248, 0.65)' : 'rgba(16, 185, 129, 0.65)',
+                            hoverRadius: 4
+                        },
+                        {
+                            type: 'line',
+                            label: 'Curva Ajustada',
+                            data: curvePoints,
+                            borderColor: currentTab === 'bonos' ? '#f97316' : '#a855f7',
+                            borderWidth: 2.5,
+                            fill: false,
+                            pointRadius: 0,
+                            tension: 0.35
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#09101f',
+                            titleColor: '#38bdf8',
+                            titleFont: { size: 13, weight: 'bold' },
+                            bodyColor: '#e2e8f0',
+                            bodyFont: { size: 12 },
+                            borderColor: '#334155',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                title: (ctx) => {
+                                    const raw = ctx[0].raw;
+                                    return raw.ticker ? `${raw.ticker} — ${raw.name}` : 'Curva de Rendimiento';
+                                },
+                                label: (ctx) => {
+                                    const raw = ctx.raw;
+                                    if(!raw.ticker) return `TIR Estimada: ${raw.y}%`;
+                                    return [
+                                        `TIR: ${raw.y.toFixed(2)}%`,
+                                        `Duration Mod.: ${raw.x.toFixed(2)} años`,
+                                        `Precio: $${raw.px.toFixed(2)}`,
+                                        `Volumen: $${(raw.vol / 1000000).toFixed(2)} M`
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Duration Modificada (Años)', color: '#94a3b8', font: { weight: 'bold' } },
+                            grid: { color: 'rgba(51, 65, 85, 0.35)' },
+                            ticks: { color: '#cbd5e1' }
+                        },
+                        y: {
+                            title: { display: true, text: 'TIR (%)', color: '#94a3b8', font: { weight: 'bold' } },
+                            grid: { color: 'rgba(51, 65, 85, 0.35)' },
+                            ticks: {
+                                color: '#cbd5e1',
+                                callback: (v) => v + '%'
+                            }
+                        }
+                    }
+                },
+                plugins: [alwaysShowLabelsPlugin]
+            });
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('panel-table-body');
+            tbody.innerHTML = '';
+            const data = getFilteredData();
+
+            document.getElementById('table-count').textContent = `${data.length} instrumentos listados`;
+
+            data.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition cursor-pointer";
+                const varColor = d.var1d >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-sky-400">${d.ticker}</td>
+                    <td class="p-3 font-sans text-slate-300">${d.name}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">${d.currency}</span></td>
+                    <td class="p-3">$${d.px.toFixed(2)}</td>
+                    <td class="p-3 font-bold text-white">${d.tir.toFixed(2)}%</td>
+                    <td class="p-3">${d.duration.toFixed(2)}</td>
+                    <td class="p-3">${d.paridad}</td>
+                    <td class="p-3 text-slate-400">${d.vto}</td>
+                    <td class="p-3 font-semibold ${varColor}">${d.var1d > 0 ? '+' : ''}${d.var1d.toFixed(2)}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderActiveView() {
+            renderChart();
+            renderTable();
+        }
+
+        window.onload = () => {
+            renderActiveView();
+            listenToFirebaseLive();
+        };
+    </script>
+</body>
+</html>
